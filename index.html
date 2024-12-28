@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дней без происшествий</title>
+    <style>
+        /* Общий стиль */
+        body {
+            font-family: Arial, sans-serif;
+            background: #1e1e2f;
+            color: #ffffff;
+            text-align: center;
+            padding: 20px;
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        h1, h2 {
+            margin: 10px 0;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            color: #ffcc00;
+        }
+
+        h2 {
+            font-size: 2em;
+            color: #00ffcc;
+        }
+
+        form {
+            margin: 20px 0;
+        }
+
+        input[type="text"] {
+            width: 80%;
+            padding: 10px;
+            font-size: 1em;
+            border: none;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background: #ff5722;
+            color: #ffffff;
+            padding: 10px 20px;
+            font-size: 1em;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #e64a19;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 20px auto;
+            max-width: 500px;
+        }
+
+        li {
+            background: #2a2a3d;
+            border: 1px solid #ffcc00;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            text-align: left;
+        }
+
+        li span {
+            color: #ffcc00;
+            font-weight: bold;
+        }
+
+        /* Дисклеймеры */
+        #disclaimer {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 0.8em;
+            color: rgba(255, 255, 255, 0.6);
+            max-width: 30%;
+            line-height: 1.2;
+            text-align: left;
+        }
+
+        #record {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 0.8em;
+            color: rgba(255, 255, 255, 0.6);
+            text-align: right;
+        }
+
+        #inputInstruction {
+            font-size: 0.7em;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 5px;
+        }
+
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            #disclaimer, #record {
+                font-size: 0.6em;
+                max-width: 50%;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            h2 {
+                font-size: 1.5em;
+            }
+
+            input[type="text"] {
+                width: 90%;
+            }
+
+            button {
+                font-size: 0.9em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #disclaimer, #record {
+                font-size: 0.5em;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            h2 {
+                font-size: 1.2em;
+            }
+
+            input[type="text"] {
+                width: 100%;
+            }
+
+            button {
+                font-size: 0.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="disclaimer">Все новости на сайте вымышленные. Сайт не является пропагандой чего-либо.</div>
+    <div id="record">Лучший рекорд: 0 дней, 0 часов, 0 минут, 0 секунд</div>
+    <h1>Дней без происшествий:</h1>
+    <h2 id="daysCounter">0 дней, 0 часов, 0 минут, 0 секунд</h2>
+
+    <form id="incidentForm">
+        <div id="inputInstruction">Пожалуйста, вводите только происшествия. Никакого спама или неуместного текста.</div>
+        <input type="text" id="incidentInput" placeholder="Опишите происшествие" required>
+        <button type="submit">Сообщить</button>
+    </form>
+
+    <ul id="incidentList"></ul>
+
+    <script>
+        const apiUrl = 'https://676ad142bc36a202bb835823.mockapi.io/api/v1/incidents/incidents'; // MockAPI URL
+        let timerInterval = null;
+
+        // Функция для получения данных с сервера
+        async function fetchIncidents() {
+            const response = await fetch(apiUrl);
+            const incidents = await response.json();
+            return incidents.reverse();
+        }
+
+        // Функция для отправки нового происшествия
+        async function sendIncident(incidentText) {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ incident: incidentText, date: new Date().toISOString() }),
+            });
+            return response.json();
+        }
+
+        // Таймер
+        function startTimer(lastDate) {
+            clearInterval(timerInterval);
+
+            const lastIncidentDate = new Date(lastDate);
+
+            function calculateTime() {
+                const now = new Date();
+                const diff = Math.floor((now - lastIncidentDate) / 1000);
+
+                const days = Math.floor(diff / (24 * 3600));
+                const hours = Math.floor((diff % (24 * 3600)) / 3600);
+                const minutes = Math.floor((diff % 3600) / 60);
+                const seconds = diff % 60;
+
+                document.getElementById('daysCounter').textContent =
+                    `${days} дней, ${hours} часов, ${minutes} минут, ${seconds} секунд`;
+
+                updateRecord(days, hours, minutes, seconds);
+            }
+
+            calculateTime();
+            timerInterval = setInterval(calculateTime, 1000);
+        }
+
+        // Обновление рекорда
+        function updateRecord(days, hours, minutes, seconds) {
+            const recordDiv = document.getElementById('record');
+            const previousRecord = JSON.parse(localStorage.getItem('bestRecord')) || { days: 0, hours: 0, minutes: 0, seconds: 0 };
+
+            if (
+                days > previousRecord.days ||
+                (days === previousRecord.days && hours > previousRecord.hours) ||
+                (days === previousRecord.days && hours === previousRecord.hours && minutes > previousRecord.minutes) ||
+                (days === previousRecord.days && hours === previousRecord.hours && minutes === previousRecord.minutes && seconds > previousRecord.seconds)
+            ) {
+                const newRecord = { days, hours, minutes, seconds };
+                localStorage.setItem('bestRecord', JSON.stringify(newRecord));
+                recordDiv.textContent = `Лучший рекорд: ${days} дней, ${hours} часов, ${minutes} минут, ${seconds} секунд`;
+            } else {
+                recordDiv.textContent = `Лучший рекорд: ${previousRecord.days} дней, ${previousRecord.hours} часов, ${previousRecord.minutes} минут, ${previousRecord.seconds} секунд`;
+            }
+        }
+
+        // Отображение происшествий
+        async function displayIncidents() {
+            const incidents = await fetchIncidents();
+            const incidentList = document.getElementById('incidentList');
+            incidentList.innerHTML = '';
+
+            incidents.forEach((incident) => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${incident.date.split('T')[0]}</span>: ${incident.incident}`;
+                incidentList.appendChild(li);
+            });
+
+            if (incidents.length > 0) {
+                startTimer(incidents[0].date);
+            }
+        }
+
+        // Обработка формы
+        document.getElementById('incidentForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const incidentInput = document.getElementById('incidentInput');
+            const incidentText = incidentInput.value;
+
+            if (incidentText) {
+                await sendIncident(incidentText);
+                incidentInput.value = '';
+                displayIncidents();
+            }
+        });
+
+        displayIncidents();
+    </script>
+</body>
+</html>
